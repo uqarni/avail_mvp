@@ -1,143 +1,76 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 function Chat() {
   const location = useLocation();
-  const navigate = useNavigate();
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [guideStep, setGuideStep] = useState(0); // 0: inactive, 1: dashboard, 2: listing builder
   const [highlightApplied, setHighlightApplied] = useState(false);
 
-  // Define functions with useCallback to prevent unnecessary re-renders
-  const clearHighlights = useCallback(() => {
-    const highlightedElements = document.querySelectorAll('.highlight-element');
-    highlightedElements.forEach(el => el.classList.remove('highlight-element'));
-    setHighlightApplied(false);
-  }, []);
-
-  const highlightElements = useCallback(() => {
-    // Prevent highlighting if we've already applied it or guide step is 0
-    if (highlightApplied || guideStep === 0) return;
-
-    // Check which page we're on based on URL path and guide step
-    console.log("Applying highlights for step:", guideStep, "on path:", location.pathname);
-
-    if (guideStep === 1 && location.pathname === '/') {
-      // Highlight BUILD LISTING button on dashboard
-      const buildButton = document.querySelector('.build-listing-btn');
-      if (buildButton) {
-        console.log("Found button, adding highlight");
-        buildButton.classList.add('highlight-element');
-
-        // Add click handler directly to the button
-        const handleButtonClick = (event) => {
-          // Prevent the default form submission (if any)
-          event.preventDefault();
-          event.stopPropagation();
-
-          // Clear highlight before navigation
-          clearHighlights();
-
-          // Set guide step for next page
-          setGuideStep(2);
-
-          // Navigate programmatically
-          navigate('/listing-builder');
-        };
-
-        // Remove existing click handlers by cloning the button
-        const newButton = buildButton.cloneNode(true);
-        buildButton.parentNode.replaceChild(newButton, buildButton);
-
-        // Add our click handler
-        newButton.addEventListener('click', handleButtonClick);
-
-        setHighlightApplied(true);
-      } else {
-        console.log("Button not found");
-      }
-    } else if (guideStep === 2 && location.pathname === '/listing-builder') {
-      // Highlight all steps in the left sidebar of ListingBuilder
-      const stepItems = document.querySelectorAll('.step-item');
-      console.log("Found step items:", stepItems.length);
-
-      if (stepItems.length > 0) {
-        stepItems.forEach(item => {
-          item.classList.add('highlight-element');
-        });
-        setHighlightApplied(true);
-      }
-    }
-  }, [guideStep, location.pathname, clearHighlights, navigate, highlightApplied]);
-
-  // Only restore guide state on initial load
-  const isInitialMount = React.useRef(true);
-
-  // Load saved state when component mounts (only once)
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
+    const wasChatOpen = localStorage.getItem('chatOpen') === 'true';
+    if (wasChatOpen) {
+      setChatOpen(true);
 
       const savedMessages = localStorage.getItem('chatMessages');
       if (savedMessages) {
-        setMessages(JSON.parse(savedMessages));
+        try {
+          const parsedMessages = JSON.parse(savedMessages);
+          const limitedMessages = parsedMessages.slice(-3);
+          setMessages(limitedMessages);
+        } catch (e) {
+          console.error("Error loading saved messages:", e);
+          localStorage.removeItem('chatMessages');
+        }
       }
+    }
 
-      const wasChatOpen = localStorage.getItem('chatOpen') === 'true';
-      if (wasChatOpen) {
-        setChatOpen(true);
-      }
-
-      // Only restore guide step if we're on the right page
-      const savedGuideStep = localStorage.getItem('guideStep');
-      if (savedGuideStep) {
+    const savedGuideStep = localStorage.getItem('guideStep');
+    if (savedGuideStep) {
+      try {
         const step = parseInt(savedGuideStep);
 
+        // Only restore guide step if we're on the right page
         if ((step === 1 && location.pathname === '/') ||
             (step === 2 && location.pathname === '/listing-builder')) {
           setGuideStep(step);
+
+          // If on step 2, ensure chat is open and show sidebar highlight
+          if (step === 2 && location.pathname === '/listing-builder') {
+            setChatOpen(true);
+            setTimeout(() => {
+              highlightListingBuilderSidebar();
+            }, 800);
+          }
         } else {
-          // Clear guide step if we're on the wrong page
           localStorage.removeItem('guideStep');
         }
+      } catch (e) {
+        console.error("Error parsing guide step:", e);
+        localStorage.removeItem('guideStep');
       }
     }
   }, [location.pathname]);
 
-  // Handle actions when reaching the listing builder page
   useEffect(() => {
-    if (guideStep === 2 && location.pathname === '/listing-builder') {
-      // Make sure chat is open
-      setChatOpen(true);
-
-      // Add message explaining the sidebar (if it doesn't exist)
-      const sidebarMessageExists = messages.some(
-        msg => msg.sender === 'bot' && msg.text.includes("Now you're in the listing builder")
-      );
-
-      if (!sidebarMessageExists) {
-        setTimeout(() => {
-          setMessages(prev => [
-            ...prev,
-            {
-              text: "Great! Now you're in the listing builder. The sidebar on the left shows all the steps you need to complete to create your listing.",
-              sender: 'bot'
-            }
-          ]);
-        }, 800);
-      }
+    if (messages.length > 0) {
+      // Only keep the last 3 messages
+      const limitedMessages = messages.slice(-3);
+      localStorage.setItem('chatMessages', JSON.stringify(limitedMessages));
+    } else {
+      localStorage.removeItem('chatMessages');
     }
-  }, [guideStep, location.pathname, messages]);
-
-  // Save chat state to localStorage
-  useEffect(() => {
-    localStorage.setItem('chatMessages', JSON.stringify(messages));
   }, [messages]);
 
   useEffect(() => {
     localStorage.setItem('chatOpen', chatOpen.toString());
+
+    if (!chatOpen) {
+      setMessages([]);
+      localStorage.removeItem('chatMessages');
+    }
   }, [chatOpen]);
 
   useEffect(() => {
@@ -148,27 +81,59 @@ function Chat() {
     }
   }, [guideStep]);
 
-  // Apply highlighting when guide step changes or on pathname change
+  // Handle element highlighting based on guide step
   useEffect(() => {
-    if (guideStep > 0) {
-      // Clear any existing highlights first
-      clearHighlights();
-
-      // Apply highlights with delay to ensure DOM is ready
-      const highlightTimer = setTimeout(() => {
-        highlightElements();
-      }, 500);
-
-      return () => {
-        clearTimeout(highlightTimer);
-        clearHighlights();
-      };
-    } else {
-      clearHighlights();
+    if (guideStep === 0 || highlightApplied) {
+      return;
     }
-  }, [guideStep, location.pathname, clearHighlights, highlightElements]);
+
+    const highlightTimer = setTimeout(() => {
+      if (guideStep === 1 && location.pathname === '/') {
+        // Highlight BUILD LISTING button
+        const buildButton = document.querySelector('.build-listing-btn');
+        if (buildButton) {
+          console.log("Highlighting BUILD LISTING button");
+          buildButton.classList.add('highlight-element');
+
+          const handleButtonClick = () => {
+            buildButton.classList.remove('highlight-element');
+            setGuideStep(2);
+          };
+
+          buildButton.addEventListener('click', handleButtonClick, { once: true });
+          setHighlightApplied(true);
+        }
+      } else if (guideStep === 2 && location.pathname === '/listing-builder') {
+        // Highlight sidebar items
+        const sidebarItems = document.querySelectorAll('.step-item');
+        if (sidebarItems.length > 0) {
+          console.log(`Found ${sidebarItems.length} step items to highlight`);
+          sidebarItems.forEach(item => {
+            item.classList.add('highlight-element');
+          });
+          setHighlightApplied(true);
+        }
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(highlightTimer);
+    };
+  }, [guideStep, location.pathname, highlightApplied]);
+
+  const clearHighlights = () => {
+    const highlightedElements = document.querySelectorAll('.highlight-element');
+    highlightedElements.forEach(el => {
+      el.classList.remove('highlight-element');
+    });
+    setHighlightApplied(false);
+  };
 
   const toggleChat = () => {
+    if (chatOpen) {
+      setMessages([]);
+      localStorage.removeItem('chatMessages');
+    }
     setChatOpen((prev) => !prev);
   };
 
@@ -177,16 +142,10 @@ function Chat() {
 
     setMessages((prev) => [...prev, { text: inputText, sender: 'user' }]);
 
-    // Check for the trigger phrase "building list"
-    if (inputText.toLowerCase().includes('building list')) {
-      // Reset guide step and highlight state
-      clearHighlights();
-      setHighlightApplied(false);
+    if (inputText.toLowerCase().trim() === 'building list') {
+      startBuildingListGuide();
 
-      // Start the guide
       setTimeout(() => {
-        setGuideStep(1);
-
         setMessages((prev) => [
           ...prev,
           {
@@ -194,7 +153,7 @@ function Chat() {
             sender: 'bot'
           },
         ]);
-      }, 300);
+      }, 1000);
     } else {
       setTimeout(() => {
         setMessages((prev) => [
@@ -205,6 +164,26 @@ function Chat() {
     }
 
     setInputText('');
+  };
+
+  const startBuildingListGuide = () => {
+    clearHighlights();
+
+    setGuideStep(1);
+  };
+
+  const highlightListingBuilderSidebar = () => {
+    clearHighlights();
+
+    setGuideStep(2);
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        text: "Great! Now you're in the listing builder. The sidebar on the left shows all the steps you need to complete to create your listing.",
+        sender: 'bot'
+      },
+    ]);
   };
 
   const handleKeyPress = (e) => {
