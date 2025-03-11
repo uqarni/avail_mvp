@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import Joyride, { STATUS } from 'react-joyride';
 
 function Chat() {
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const location = useLocation();
+  const [runTour, setRunTour] = useState(false);
+  const [steps, setSteps] = useState([]);
 
   const toggleChat = () => {
     setChatOpen((prev) => !prev);
@@ -16,14 +19,13 @@ function Chat() {
 
     setMessages((prev) => [...prev, { text: inputText, sender: 'user' }]);
 
-    // Check for the trigger phrase "building list"
-    if (inputText.toLowerCase().includes('building list')) {
-      highlightElements();
+    if (inputText.toLowerCase().trim() === 'building list') {
+      startBuildingListTour();
 
       setTimeout(() => {
         setMessages((prev) => [
           ...prev,
-          { text: "In order to start a building list you need to click at the button highlighted.", sender: 'bot' },
+          { text: "In order to start a building list, you need to click at the highlighted button. I'll show you where.", sender: 'bot' },
         ]);
       }, 1000);
     } else {
@@ -38,32 +40,43 @@ function Chat() {
     setInputText('');
   };
 
-  const highlightElements = () => {
-    clearHighlights();
-
+  const startBuildingListTour = () => {
     // Check which page we're on based on URL path
     const isDashboard = location.pathname === '/';
 
     if (isDashboard) {
-      // Highlight BUILD LISTING button on dashboard
-      const buildButton = document.querySelector('.build-listing-btn');
-      if (buildButton) {
-        buildButton.classList.add('highlight-element');
-      }
+      setSteps([
+        {
+          target: '.build-listing-btn',
+          content: 'Click this button to start building your listing',
+          disableBeacon: true,
+          placement: 'bottom',
+          disableOverlayClose: true,
+          spotlightClicks: true
+        }
+      ]);
     } else {
-      // Highlight all steps in the left sidebar of ListingBuilder
-      const stepItems = document.querySelectorAll('.step-item');
-      if (stepItems.length > 0) {
-        stepItems.forEach(item => {
-          item.classList.add('highlight-element');
-        });
-      }
+      setSteps([
+        {
+          target: '.listing-builder-sidebar',
+          content: 'These are the steps to complete your listing',
+          disableBeacon: true,
+          placement: 'right',
+          disableOverlayClose: true,
+          spotlightClicks: true
+        }
+      ]);
     }
+
+    setRunTour(true);
   };
 
-  const clearHighlights = () => {
-    const highlightedElements = document.querySelectorAll('.highlight-element');
-    highlightedElements.forEach(el => el.classList.remove('highlight-element'));
+  const handleJoyrideCallback = (data) => {
+    const { status } = data;
+
+    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
+      setRunTour(false);
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -74,6 +87,20 @@ function Chat() {
 
   return (
     <>
+      <Joyride
+        steps={steps}
+        run={runTour}
+        continuous={false}
+        showSkipButton={true}
+        callback={handleJoyrideCallback}
+        styles={{
+          options: {
+            primaryColor: '#0077cc',
+            zIndex: 10000,
+          }
+        }}
+      />
+
       <button className="chat-toggle-button" onClick={toggleChat}>
         {chatOpen ? 'X' : 'Chat'}
       </button>
