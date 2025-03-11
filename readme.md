@@ -25,7 +25,7 @@ docker compose run --rm service_name alembic upgrade head
 
 
 ```bash
-python -m venv .venv
+  python -m venv .venv
 ```
 
 
@@ -41,4 +41,18 @@ Activate the virtual environment using the appropriate command for your operatin
 - **macOS/Linux:**
   ```bash
   source ./.venv/bin/activate
+  ```
+
+
+### Run Front-End
+Make sure you have Node.js installed. 
+
+- **To install the required libraries:**
+  ```bash
+    npm install
+  ```
+  
+- **To run the application:**
+  ```bash
+    npm start
   ```

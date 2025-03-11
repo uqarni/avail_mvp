@@ -64,6 +64,23 @@ services:
     networks:
       - gepeto_network
 
+  frontend:
+    container_name: gepeto_frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - service_name
+    networks:
+      - gepeto_network
+
 
 volumes:
   postgres_data_v1:
