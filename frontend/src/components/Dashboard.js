@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 import Chat from './Chat';
 
 function Dashboard() {
-  const navigate = useNavigate();
+  const history = useHistory();
   const [activeTab, setActiveTab] = useState('listing');
 
   const handleBuildListing = () => {
-    navigate('/listing-builder');
+    history.push('/listing-builder');
   };
 
   return (

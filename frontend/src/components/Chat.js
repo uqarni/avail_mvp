@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation, useHistory } from 'react-router-dom';
 import Joyride, { STATUS } from 'react-joyride';
 
 function Chat() {
   const location = useLocation();
-  const navigate = useNavigate();
+  const history = useHistory();
   const firstRenderRef = useRef(true);
   const tourInProgressRef = useRef(false);
 
@@ -18,7 +18,7 @@ function Chat() {
   const [steps, setSteps] = useState([]);
   const [tourRequested, setTourRequested] = useState(false);
 
-
+  // Only run on first render
   useEffect(() => {
     if (firstRenderRef.current) {
       const inProgressTour = localStorage.getItem('tourInProgress') === 'true';
@@ -35,7 +35,7 @@ function Chat() {
     }
   }, [location.pathname]);
 
-  const setupTourBasedOnLocation = () => {
+  const setupTourBasedOnLocation = useCallback(() => {
     if (!tourRequested) return;
 
     console.log("SETTING UP TOUR FOR:", location.pathname);
@@ -44,22 +44,27 @@ function Chat() {
     localStorage.setItem('tourInProgress', 'true');
 
     if (location.pathname === '/' || location.pathname === '') {
-      const buildButton = document.querySelector('.build-listing-btn');
+      // Add a slight delay to make sure the DOM is fully loaded
+      setTimeout(() => {
+        const buildButton = document.querySelector('.build-listing-btn');
+        console.log("Build button found:", buildButton);
 
-      if (buildButton) {
-        setSteps([{
-          target: '.build-listing-btn',
-          content: 'Click this button to start building your listing',
-          disableBeacon: true,
-          placement: 'bottom',
-          spotlightClicks: true,
-          disableOverlayClose: true,
-        }]);
-        setRunTour(true);
-      }
+        if (buildButton) {
+          setSteps([{
+            target: '.build-listing-btn',
+            content: 'Click this button to start building your listing',
+            disableBeacon: true,
+            placement: 'bottom',
+            spotlightClicks: true,
+            disableOverlayClose: true,
+          }]);
+          setRunTour(true);
+        } else {
+          console.log("BUILD BUTTON NOT FOUND");
+        }
+      }, 500);
     }
     else if (location.pathname.includes('listing-builder')) {
-
       setChatOpen(true);
 
       const checkForSidebar = () => {
@@ -91,19 +96,19 @@ function Chat() {
 
       checkForSidebar();
     }
-  };
+  }, [location.pathname, tourRequested, setMessages]);
 
+  // This effect will run when tourRequested changes
   useEffect(() => {
     if (tourRequested) {
       setupTourBasedOnLocation();
     }
-  }, [location.pathname, tourRequested]);
+  }, [tourRequested, setupTourBasedOnLocation]);
 
+  // This effect handles specific behavior for the listing-builder path
   useEffect(() => {
     if (location.pathname.includes('listing-builder') && tourInProgressRef.current) {
-
       setChatOpen(true);
-
       setTourRequested(true);
     }
   }, [location.pathname]);
@@ -121,7 +126,7 @@ function Chat() {
         type === 'step:after' &&
         action !== 'skip'
       ) {
-        navigate('/listing-builder');
+        history.push('/listing-builder');
       }
       else if (location.pathname.includes('listing-builder')) {
         setTourRequested(false);
@@ -149,8 +154,6 @@ function Chat() {
     setMessages(prev => [...prev, { text: inputText, sender: 'user' }]);
 
     if (inputText.toLowerCase().includes('building list')) {
-      startTour();
-
       setTimeout(() => {
         setMessages(prev => [
           ...prev,
@@ -159,7 +162,10 @@ function Chat() {
             sender: 'bot'
           }
         ]);
-      }, 1000);
+
+        // Start the tour after adding the message
+        startTour();
+      }, 500);
     }
     else {
       setTimeout(() => {
@@ -167,7 +173,7 @@ function Chat() {
           ...prev,
           { text: 'Hello, how can I help you today?', sender: 'bot' }
         ]);
-      }, 1000);
+      }, 500);
     }
 
     setInputText('');
