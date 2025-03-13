@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 
 function Chat() {
@@ -8,6 +8,28 @@ function Chat() {
   const [inputText, setInputText] = useState('');
   const [guideStep, setGuideStep] = useState(0); // 0: inactive, 1: dashboard, 2: listing builder
   const [highlightApplied, setHighlightApplied] = useState(false);
+
+  const highlightListingBuilderSidebar = useCallback(() => {
+    clearHighlights();
+
+    setGuideStep(2);
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        text: "Great! Now you're in the listing builder. The sidebar on the left shows all the steps you need to complete to create your listing.",
+        sender: 'bot'
+      },
+    ]);
+  }, []);
+
+  const clearHighlights = useCallback(() => {
+    const highlightedElements = document.querySelectorAll('.highlight-element');
+    highlightedElements.forEach(el => {
+      el.classList.remove('highlight-element');
+    });
+    setHighlightApplied(false);
+  }, []);
 
   useEffect(() => {
     const wasChatOpen = localStorage.getItem('chatOpen') === 'true';
@@ -52,7 +74,7 @@ function Chat() {
         localStorage.removeItem('guideStep');
       }
     }
-  }, [location.pathname]);
+  }, [location.pathname, highlightListingBuilderSidebar]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -119,15 +141,7 @@ function Chat() {
     return () => {
       clearTimeout(highlightTimer);
     };
-  }, [guideStep, location.pathname, highlightApplied]);
-
-  const clearHighlights = () => {
-    const highlightedElements = document.querySelectorAll('.highlight-element');
-    highlightedElements.forEach(el => {
-      el.classList.remove('highlight-element');
-    });
-    setHighlightApplied(false);
-  };
+  }, [guideStep, location.pathname, highlightApplied, highlightListingBuilderSidebar]);
 
   const toggleChat = () => {
     if (chatOpen) {
@@ -168,22 +182,7 @@ function Chat() {
 
   const startBuildingListGuide = () => {
     clearHighlights();
-
     setGuideStep(1);
-  };
-
-  const highlightListingBuilderSidebar = () => {
-    clearHighlights();
-
-    setGuideStep(2);
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        text: "Great! Now you're in the listing builder. The sidebar on the left shows all the steps you need to complete to create your listing.",
-        sender: 'bot'
-      },
-    ]);
   };
 
   const handleKeyPress = (e) => {

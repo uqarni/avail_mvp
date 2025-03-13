@@ -65,15 +65,15 @@ services:
       - gepeto_network
 
   frontend:
-    container_name: avail_frontend
+    container_name: avail_frontend_query_selector
     build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
     environment:
       - CHOKIDAR_USEPOLLING=true
       - WDS_SOCKET_PORT=0
