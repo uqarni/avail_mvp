@@ -45,14 +45,14 @@ Activate the virtual environment using the appropriate command for your operatin
 
 
 ### Run Front-End
-Make sure you have Node.js installed. 
+To run the front-end you can use **docker-compose**
 
-- **To install the required libraries:**
+- **First time running the container:**
   ```bash
-    npm install
+    docker-compose up --build
   ```
   
-- **To run the application:**
+- **Subsequent runs (when no Dockerfile changes):**
   ```bash
-    npm start
+    docker-compose up
   ```
