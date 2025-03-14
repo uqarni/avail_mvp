@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Chat from './Chat';
 import './ListingBuilder.css';
 
@@ -17,7 +17,7 @@ function ListingBuilder() {
         return true;
     }
   }
-  const history = useHistory();
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     // Basics
@@ -77,7 +77,7 @@ function ListingBuilder() {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     } else {
-      history.push('/'); // Navigate back to dashboard if on first step
+      navigate('/'); // Navigate back to dashboard if on first step
     }
   };
 

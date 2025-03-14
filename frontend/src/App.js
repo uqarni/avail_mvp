@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Switch, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import ListingBuilder from './components/ListingBuilder';
 import './App.css';
@@ -7,10 +7,10 @@ import './App.css';
 function App() {
   return (
     <BrowserRouter>
-      <Switch>
-        <Route exact path="/" component={Dashboard} />
-        <Route path="/listing-builder" component={ListingBuilder} />
-      </Switch>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/listing-builder" element={<ListingBuilder />} />
+      </Routes>
     </BrowserRouter>
   );
 }

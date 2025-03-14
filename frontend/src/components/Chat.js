@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useLocation, useHistory } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Joyride, { STATUS } from 'react-joyride';
 
 function Chat() {
   const location = useLocation();
-  const history = useHistory();
+  const navigate = useNavigate();
   const firstRenderRef = useRef(true);
   const tourInProgressRef = useRef(false);
 
@@ -126,7 +126,7 @@ function Chat() {
         type === 'step:after' &&
         action !== 'skip'
       ) {
-        history.push('/listing-builder');
+        navigate('/listing-builder');
       }
       else if (location.pathname.includes('listing-builder')) {
         setTourRequested(false);
