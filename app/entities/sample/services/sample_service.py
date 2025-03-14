@@ -1,1 +1,1 @@
-#define service class and dependency here
+#define services class and dependency here

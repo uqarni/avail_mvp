@@ -1,167 +1,106 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import Tippy from '@tippyjs/react';
-import 'tippy.js/dist/tippy.css';
-import 'tippy.js/themes/light.css';
+import TourManager from './TourManager';
+import { processChatMessage } from '../services/TourService';
 
 function Chat() {
   const location = useLocation();
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
-  const [showTooltip, setShowTooltip] = useState(false);
-  const [tooltipTarget, setTooltipTarget] = useState(null);
-  const [tooltipContent, setTooltipContent] = useState('');
-  const [guideStep, setGuideStep] = useState(0); // 0: inactive, 1: dashboard, 2: listing builder
-  const tippyRef = useRef(null);
+  const [tourType, setTourType] = useState(null);
+  const [tourStep, setTourStep] = useState(0);
+  // eslint-disable-next-line
+  const [routeChanged, setRouteChanged] = useState(false);
 
   useEffect(() => {
-    const savedMessages = localStorage.getItem('chatMessages');
-    if (savedMessages) {
-      setMessages(JSON.parse(savedMessages));
-    }
+    setRouteChanged(true);
+  }, [location.pathname]);
 
+  useEffect(() => {
     const wasChatOpen = localStorage.getItem('chatOpen') === 'true';
     if (wasChatOpen) {
       setChatOpen(true);
     }
 
-    const savedGuideStep = localStorage.getItem('guideStep');
-    if (savedGuideStep) {
-      const step = parseInt(savedGuideStep);
-      setGuideStep(step);
+    const savedTourType = localStorage.getItem('tourType');
+    const savedTourStep = localStorage.getItem('tourStep');
 
-      if (step === 2 && location.pathname === '/listing-builder') {
-        setChatOpen(true);
-
-        setTimeout(() => {
-          highlightListingBuilderSidebar();
-        }, 800);
+    if (savedTourType && savedTourStep) {
+      const step = parseInt(savedTourStep);
+      if (step > 0) {
+        setTourType(savedTourType);
+        setTourStep(step);
       }
     }
-  }, [location.pathname]);
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('chatMessages', JSON.stringify(messages));
-  }, [messages]);
+    if (tourType && tourStep > 0) {
+      localStorage.setItem('tourType', tourType);
+      localStorage.setItem('tourStep', tourStep.toString());
+    } else {
+      localStorage.removeItem('tourType');
+      localStorage.removeItem('tourStep');
+    }
+  }, [tourType, tourStep]);
 
   useEffect(() => {
     localStorage.setItem('chatOpen', chatOpen.toString());
   }, [chatOpen]);
 
-  useEffect(() => {
-    if (guideStep > 0) {
-      localStorage.setItem('guideStep', guideStep.toString());
-    } else {
-      localStorage.removeItem('guideStep');
-    }
-  }, [guideStep]);
-
-  useEffect(() => {
-    if (showTooltip) {
-      let selector;
-
-      if (guideStep === 1) {
-        selector = '.build-listing-btn';
-      } else if (guideStep === 2) {
-        selector = '.listing-builder-sidebar';
-      } else {
-        return;
-      }
-
-      const findElement = () => {
-        const targetElement = document.querySelector(selector);
-
-        if (targetElement) {
-          // Highlight the element
-          targetElement.style.boxShadow = '0 0 0 4px rgba(0, 119, 204, 0.7)';
-          targetElement.style.position = 'relative';
-          targetElement.style.zIndex = '100';
-
-          // Set it as our tooltip target
-          setTooltipTarget(targetElement);
-
-          // Add click listener to handle progression
-          const handleClick = () => {
-            if (guideStep === 1) {
-              // User clicked the BUILD LISTING button
-              setShowTooltip(false);
-              setGuideStep(2); // Set step for when we reach the listing page
-            } else if (guideStep === 2) {
-              // User clicked on the sidebar
-              setShowTooltip(false);
-              setGuideStep(0)
-            }
-          };
-
-          targetElement.addEventListener('click', handleClick);
-
-          return () => {
-            targetElement.style.boxShadow = '';
-            targetElement.style.position = '';
-            targetElement.style.zIndex = '';
-            targetElement.removeEventListener('click', handleClick);
-          };
-        } else {
-          const retryTimer = setTimeout(findElement, 200);
-          return () => clearTimeout(retryTimer);
-        }
-      };
-
-      return findElement();
-    }
-  }, [showTooltip, guideStep]);
-
   const toggleChat = () => {
     setChatOpen((prev) => !prev);
+    if (chatOpen) {
+      setMessages([]);
+    }
   };
+
+  const handleTourStepChange = useCallback((newStep) => {
+    setTourStep(newStep);
+  }, []);
+
+  const handleTourComplete = useCallback(() => {
+    setTourType(null);
+    setTourStep(0);
+  }, []);
+
+  const handleAddTourMessage = useCallback((message) => {
+    if (!message) return;
+
+    setMessages((prev) => [
+      ...prev,
+      { text: message, sender: 'bot' }
+    ]);
+  }, []);
 
   const handleSend = () => {
     if (inputText.trim() === '') return;
 
-    setMessages((prev) => [...prev, { text: inputText, sender: 'user' }]);
+    const userMessage = inputText;
+    setMessages((prev) => [...prev, { text: userMessage, sender: 'user' }]);
+    setInputText('');
 
-    if (inputText.toLowerCase().trim() === 'building list') {
-      startBuildingListGuide();
+    const response = processChatMessage(userMessage);
+
+    if (response.tourType) {
+      setTourType(response.tourType);
+      setTourStep(response.step);
 
       setTimeout(() => {
         setMessages((prev) => [
           ...prev,
-          {
-            text: "Let me guide you through creating a listing. First, click the highlighted 'BUILD LISTING' button.",
-            sender: 'bot'
-          },
+          { text: response.message, sender: 'bot' }
         ]);
-      }, 1000);
+      }, 500);
     } else {
       setTimeout(() => {
         setMessages((prev) => [
           ...prev,
-          { text: 'Hello, how can I help you today?', sender: 'bot' },
+          { text: response.message, sender: 'bot' }
         ]);
-      }, 1000);
+      }, 500);
     }
-
-    setInputText('');
-  };
-
-  const startBuildingListGuide = () => {
-    setGuideStep(1);
-    setTooltipContent('Click this button to start building your listing');
-    setShowTooltip(true);
-  };
-
-  const highlightListingBuilderSidebar = () => {
-    setTooltipContent('These are the steps to complete your listing. Click on each step to fill out the information.');
-    setShowTooltip(true);
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        text: "Great! Now you're in the listing builder. The sidebar on the left shows all the steps you need to complete to create your listing.",
-        sender: 'bot'
-      },
-    ]);
   };
 
   const handleKeyPress = (e) => {
@@ -172,46 +111,15 @@ function Chat() {
 
   return (
     <>
-      {showTooltip && tooltipTarget && (
-        <Tippy
-          ref={tippyRef}
-          content={
-            <div style={{ padding: '5px', minWidth: '200px' }}>
-              <p>{tooltipContent}</p>
-              <button
-                onClick={() => {
-                  setShowTooltip(false);
-                  if (guideStep === 2) {
-                    setGuideStep(0); // End the guide
-                  }
-                }}
-                style={{
-                  padding: '5px 10px',
-                  background: '#0077cc',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  float: 'right',
-                  marginTop: '5px',
-                  cursor: 'pointer'
-                }}
-              >
-                Got it
-              </button>
-            </div>
-          }
-          visible={showTooltip}
-          placement={guideStep === 1 ? 'bottom' : 'right'}
-          theme="light"
-          interactive={true}
-          appendTo={document.body}
-          onClickOutside={() => {
-            setShowTooltip(false);
-            if (guideStep === 2) {
-              setGuideStep(0);
-            }
-          }}
-          reference={tooltipTarget}
+      {/* Tour Manager only renders when a tour is active */}
+      {tourType && tourStep > 0 && (
+        <TourManager
+          tourType={tourType}
+          step={tourStep}
+          onStepChange={handleTourStepChange}
+          onTourComplete={handleTourComplete}
+          onAddMessage={handleAddTourMessage}
+          key={`${tourType}-${tourStep}-${location.pathname}`}
         />
       )}
 
