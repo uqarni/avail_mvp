@@ -7,9 +7,11 @@ function Chat() {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
 
+  // Tour state
   const [tourType, setTourType] = useState(null);
   const [tourStep, setTourStep] = useState(0);
 
+  // Load saved state on initial mount
   useEffect(() => {
     const wasChatOpen = localStorage.getItem('chatOpen') === 'true';
     if (wasChatOpen) {
@@ -28,6 +30,7 @@ function Chat() {
       }
     }
 
+    // Load tour state
     const savedTourType = localStorage.getItem('tourType');
     const savedTourStep = localStorage.getItem('tourStep');
 
@@ -37,7 +40,7 @@ function Chat() {
         if (step > 0) {
           setTourType(savedTourType);
           setTourStep(step);
-          setChatOpen(true);
+          setChatOpen(true); // Always open chat when a tour is active
         }
       } catch (e) {
         console.error("Error loading tour state:", e);
@@ -47,6 +50,7 @@ function Chat() {
     }
   }, []);
 
+  // Save messages to localStorage
   useEffect(() => {
     if (messages.length > 0) {
       const limitedMessages = messages.slice(-3);
@@ -56,6 +60,7 @@ function Chat() {
     }
   }, [messages]);
 
+  // Save chat state to localStorage
   useEffect(() => {
     localStorage.setItem('chatOpen', chatOpen.toString());
 
@@ -65,6 +70,7 @@ function Chat() {
     }
   }, [chatOpen]);
 
+  // Save tour state to localStorage
   useEffect(() => {
     if (tourType && tourStep > 0) {
       localStorage.setItem('tourType', tourType);
@@ -75,6 +81,7 @@ function Chat() {
     }
   }, [tourType, tourStep]);
 
+  // Toggle chat open/closed
   const toggleChat = () => {
     if (chatOpen) {
       setMessages([]);
@@ -83,10 +90,12 @@ function Chat() {
     setChatOpen((prev) => !prev);
   };
 
+  // Handle tour step changes
   const handleTourStepChange = useCallback((newStep) => {
     setTourStep(newStep);
   }, []);
 
+  // Handle tour completion
   const handleTourComplete = useCallback(() => {
     setTourType(null);
     setTourStep(0);
@@ -122,6 +131,7 @@ function Chat() {
           ]);
         }, 500);
       } else {
+        // Regular response
         setTimeout(() => {
           setMessages((prev) => [
             ...prev,
@@ -140,6 +150,7 @@ function Chat() {
     }
   };
 
+  // Handle Enter key press
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       handleSend();

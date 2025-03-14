@@ -1,6 +1,7 @@
-import { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getTourHighlight } from '../services/TourService';
+import SpotlightHighlight from './SpotlightHighlight';
 
 const TourManager = ({
   tourType,
@@ -9,63 +10,29 @@ const TourManager = ({
   onAddMessage
 }) => {
   const location = useLocation();
-  const [highlightApplied, setHighlightApplied] = useState(false);
+  const [highlightInfo, setHighlightInfo] = useState(null);
 
   const clearHighlights = useCallback(() => {
-    const highlightedElements = document.querySelectorAll('.highlight-element');
-    highlightedElements.forEach(el => {
-      el.classList.remove('highlight-element');
-    });
-    setHighlightApplied(false);
+    setHighlightInfo(null);
   }, []);
 
   useEffect(() => {
     clearHighlights();
-    setHighlightApplied(false);
 
     if (!tourType || step === 0) {
       return;
     }
 
-    const highlightInfo = getTourHighlight(tourType, step, location.pathname);
-    if (!highlightInfo) return;
+    const info = getTourHighlight(tourType, step, location.pathname);
+    if (!info) return;
 
-    const highlightTimer = setTimeout(() => {
-      const elements = document.querySelectorAll(highlightInfo.selector);
+    setHighlightInfo(info);
 
-      if (elements.length > 0) {
-        console.log(`Highlighting ${elements.length} elements with selector ${highlightInfo.selector}`);
+    if (info.message && onAddMessage) {
+      onAddMessage(info.message);
+    }
 
-        if (highlightInfo.multiple) {
-          elements.forEach(item => {
-            item.classList.add('highlight-element');
-          });
-        } else {
-          elements[0].classList.add('highlight-element');
-
-          if (highlightInfo.nextStepOnClick) {
-            const handleClick = () => {
-              elements[0].classList.remove('highlight-element');
-              onStepChange(step + 1);
-            };
-
-            elements[0].addEventListener('click', handleClick, { once: true });
-          }
-        }
-
-        if (highlightInfo.message && onAddMessage) {
-          onAddMessage(highlightInfo.message);
-        }
-
-        setHighlightApplied(true);
-      }
-    }, 500);
-
-    return () => {
-      clearTimeout(highlightTimer);
-      clearHighlights();
-    };
-  }, [tourType, step, location.pathname, clearHighlights, onStepChange, onAddMessage]);
+  }, [tourType, step, location.pathname, clearHighlights, onAddMessage]);
 
   useEffect(() => {
     if (!tourType || step === 0) return;
@@ -78,7 +45,22 @@ const TourManager = ({
     }
   }, [location.pathname, tourType, step, onStepChange]);
 
-  return null;
+  const handleNextStep = useCallback(() => {
+    onStepChange(step + 1);
+  }, [step, onStepChange]);
+
+  if (!highlightInfo) {
+    return null;
+  }
+
+  return (
+    <SpotlightHighlight
+      selector={highlightInfo.selector}
+      padding={20}
+      onNext={highlightInfo.nextStepOnClick ? handleNextStep : undefined}
+      includeChatInSpotlight={true}
+    />
+  );
 };
 
 export default TourManager;

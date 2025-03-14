@@ -1,0 +1,13 @@
+.spotlight-target-cutout {
+  position: absolute;
+  z-index: 9001;
+  border-radius: 5px;
+  background-color: transparent;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+}
+
+.spotlight-target {
+  position: relative;
+  z-index: 9002;
+  pointer-events: auto;
+}

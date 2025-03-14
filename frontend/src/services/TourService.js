@@ -10,14 +10,14 @@ const TOUR_CONFIGS = {
         selector: '.build-listing-btn',
         multiple: false,
         nextStepOnClick: true,
-        message: "Let me guide you through creating a listing. First, click the highlighted 'BUILD LISTING' button."
+        message: "Click this button to start building your listing"
       },
       2: {
         route: '/listing-builder',
         selector: '.step-item',
         multiple: true,
         nextStepOnClick: false,
-        message: "Great! Now you're in the listing builder. The sidebar on the left shows all the steps you need to complete to create your listing."
+        message: "These are the steps you'll need to complete to create your listing. Let's start with the basics."
       }
     }
   }
@@ -27,9 +27,9 @@ export const getTourHighlight = (tourType, step, pathname) => {
   if (!TOUR_CONFIGS[tourType]) {
     return null;
   }
-
+  
   const stepConfig = TOUR_CONFIGS[tourType].steps[step];
-
+  
   if (stepConfig && stepConfig.route === pathname) {
     return {
       selector: stepConfig.selector,
@@ -38,14 +38,25 @@ export const getTourHighlight = (tourType, step, pathname) => {
       message: stepConfig.message
     };
   }
-
+  
   return null;
 };
+
+
+export const getMaxStepForTour = (tourType) => {
+  if (!TOUR_CONFIGS[tourType]) {
+    return 0;
+  }
+  
+  const steps = TOUR_CONFIGS[tourType].steps;
+  return Math.max(...Object.keys(steps).map(Number));
+};
+
 
 export const processChatMessage = async (message) => {
   try {
     const lowerMsg = message.toLowerCase().trim();
-
+    
     if (lowerMsg === 'building list' || lowerMsg === 'create listing') {
       return {
         tourType: TOUR_TYPES.LISTING_BUILDER,
@@ -53,7 +64,7 @@ export const processChatMessage = async (message) => {
         message: TOUR_CONFIGS[TOUR_TYPES.LISTING_BUILDER].steps[1].message
       };
     }
-
+    
     return {
       message: "Hello, how can I help you today?"
     };
