@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import TourManager from './TourManager';
 import {processChatMessage} from '../services/TourService';
+import { performHealthCheck } from '../api/ApiService';
 
 function Chat() {
   const [chatOpen, setChatOpen] = useState(false);
@@ -112,6 +113,12 @@ function Chat() {
 
   const handleSend = async () => {
     if (inputText.trim() === '') return;
+
+    try {
+        await performHealthCheck();
+    } catch(e) {
+        console.error("healthCheck failed ", e)
+    }
 
     setMessages((prev) => [...prev, { text: inputText, sender: 'user' }]);
     const userMessage = inputText;
