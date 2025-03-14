@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.clients.db.postgres_client import Base, engine
 from app.monitoring.logging import get_logger
 from fastapi.responses import JSONResponse
+from app.entities.sample.api.v1.routes.evals_routes import router
 
 
 
@@ -24,7 +25,7 @@ app.add_middleware(
 )
 
 
-# app.include_router(healthRouter, prefix=settings.API_V1_STR)
+app.include_router(router)
 
 
 

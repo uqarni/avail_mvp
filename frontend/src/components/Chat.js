@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import TourManager from './TourManager';
 import { processChatMessage } from '../services/TourService';
+import { performHealthCheck } from '../api/ApiService';
 
 function Chat() {
   const location = useLocation();
@@ -74,8 +75,14 @@ function Chat() {
     ]);
   }, []);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (inputText.trim() === '') return;
+
+    try {
+        await performHealthCheck();
+    } catch(e) {
+        console.error("healthCheck failed ", e)
+    }
 
     const userMessage = inputText;
     setMessages((prev) => [...prev, { text: userMessage, sender: 'user' }]);
