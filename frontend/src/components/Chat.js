@@ -1,35 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, {useCallback, useEffect, useState} from 'react';
+import TourManager from './TourManager';
+import {processChatMessage} from '../services/TourService';
 
 function Chat() {
-  const location = useLocation();
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
-  const [guideStep, setGuideStep] = useState(0); // 0: inactive, 1: dashboard, 2: listing builder
-  const [highlightApplied, setHighlightApplied] = useState(false);
 
-  const highlightListingBuilderSidebar = useCallback(() => {
-    clearHighlights();
-
-    setGuideStep(2);
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        text: "Great! Now you're in the listing builder. The sidebar on the left shows all the steps you need to complete to create your listing.",
-        sender: 'bot'
-      },
-    ]);
-  }, []);
-
-  const clearHighlights = useCallback(() => {
-    const highlightedElements = document.querySelectorAll('.highlight-element');
-    highlightedElements.forEach(el => {
-      el.classList.remove('highlight-element');
-    });
-    setHighlightApplied(false);
-  }, []);
+  const [tourType, setTourType] = useState(null);
+  const [tourStep, setTourStep] = useState(0);
 
   useEffect(() => {
     const wasChatOpen = localStorage.getItem('chatOpen') === 'true';
@@ -49,36 +28,27 @@ function Chat() {
       }
     }
 
-    const savedGuideStep = localStorage.getItem('guideStep');
-    if (savedGuideStep) {
+    const savedTourType = localStorage.getItem('tourType');
+    const savedTourStep = localStorage.getItem('tourStep');
+
+    if (savedTourType && savedTourStep) {
       try {
-        const step = parseInt(savedGuideStep);
-
-        // Only restore guide step if we're on the right page
-        if ((step === 1 && location.pathname === '/') ||
-            (step === 2 && location.pathname === '/listing-builder')) {
-          setGuideStep(step);
-
-          // If on step 2, ensure chat is open and show sidebar highlight
-          if (step === 2 && location.pathname === '/listing-builder') {
-            setChatOpen(true);
-            setTimeout(() => {
-              highlightListingBuilderSidebar();
-            }, 800);
-          }
-        } else {
-          localStorage.removeItem('guideStep');
+        const step = parseInt(savedTourStep);
+        if (step > 0) {
+          setTourType(savedTourType);
+          setTourStep(step);
+          setChatOpen(true);
         }
       } catch (e) {
-        console.error("Error parsing guide step:", e);
-        localStorage.removeItem('guideStep');
+        console.error("Error loading tour state:", e);
+        localStorage.removeItem('tourType');
+        localStorage.removeItem('tourStep');
       }
     }
-  }, [location.pathname, highlightListingBuilderSidebar]);
+  }, []);
 
   useEffect(() => {
     if (messages.length > 0) {
-      // Only keep the last 3 messages
       const limitedMessages = messages.slice(-3);
       localStorage.setItem('chatMessages', JSON.stringify(limitedMessages));
     } else {
@@ -96,52 +66,14 @@ function Chat() {
   }, [chatOpen]);
 
   useEffect(() => {
-    if (guideStep > 0) {
-      localStorage.setItem('guideStep', guideStep.toString());
+    if (tourType && tourStep > 0) {
+      localStorage.setItem('tourType', tourType);
+      localStorage.setItem('tourStep', tourStep.toString());
     } else {
-      localStorage.removeItem('guideStep');
+      localStorage.removeItem('tourType');
+      localStorage.removeItem('tourStep');
     }
-  }, [guideStep]);
-
-  // Handle element highlighting based on guide step
-  useEffect(() => {
-    if (guideStep === 0 || highlightApplied) {
-      return;
-    }
-
-    const highlightTimer = setTimeout(() => {
-      if (guideStep === 1 && location.pathname === '/') {
-        // Highlight BUILD LISTING button
-        const buildButton = document.querySelector('.build-listing-btn');
-        if (buildButton) {
-          console.log("Highlighting BUILD LISTING button");
-          buildButton.classList.add('highlight-element');
-
-          const handleButtonClick = () => {
-            buildButton.classList.remove('highlight-element');
-            setGuideStep(2);
-          };
-
-          buildButton.addEventListener('click', handleButtonClick, { once: true });
-          setHighlightApplied(true);
-        }
-      } else if (guideStep === 2 && location.pathname === '/listing-builder') {
-        // Highlight sidebar items
-        const sidebarItems = document.querySelectorAll('.step-item');
-        if (sidebarItems.length > 0) {
-          console.log(`Found ${sidebarItems.length} step items to highlight`);
-          sidebarItems.forEach(item => {
-            item.classList.add('highlight-element');
-          });
-          setHighlightApplied(true);
-        }
-      }
-    }, 500);
-
-    return () => {
-      clearTimeout(highlightTimer);
-    };
-  }, [guideStep, location.pathname, highlightApplied, highlightListingBuilderSidebar]);
+  }, [tourType, tourStep]);
 
   const toggleChat = () => {
     if (chatOpen) {
@@ -151,38 +83,61 @@ function Chat() {
     setChatOpen((prev) => !prev);
   };
 
-  const handleSend = () => {
+  const handleTourStepChange = useCallback((newStep) => {
+    setTourStep(newStep);
+  }, []);
+
+  const handleTourComplete = useCallback(() => {
+    setTourType(null);
+    setTourStep(0);
+  }, []);
+
+  const handleAddTourMessage = useCallback((message) => {
+    if (!message) return;
+
+    setMessages((prev) => [
+      ...prev,
+      { text: message, sender: 'bot' }
+    ]);
+  }, []);
+
+  const handleSend = async () => {
     if (inputText.trim() === '') return;
 
     setMessages((prev) => [...prev, { text: inputText, sender: 'user' }]);
-
-    if (inputText.toLowerCase().trim() === 'building list') {
-      startBuildingListGuide();
-
-      setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          {
-            text: "Let me guide you through creating a listing. First, click the highlighted 'BUILD LISTING' button.",
-            sender: 'bot'
-          },
-        ]);
-      }, 1000);
-    } else {
-      setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          { text: 'Hello, how can I help you today?', sender: 'bot' },
-        ]);
-      }, 1000);
-    }
-
+    const userMessage = inputText;
     setInputText('');
-  };
 
-  const startBuildingListGuide = () => {
-    clearHighlights();
-    setGuideStep(1);
+    try {
+      const response = await processChatMessage(userMessage);
+
+      if (response.tourType) {
+        setTourType(response.tourType);
+        setTourStep(response.step);
+
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            { text: response.message, sender: 'bot' }
+          ]);
+        }, 500);
+      } else {
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            { text: response.message, sender: 'bot' }
+          ]);
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Error processing message:', error);
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          { text: "Sorry, I'm having trouble responding right now.", sender: 'bot' }
+        ]);
+      }, 500);
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -226,6 +181,14 @@ function Chat() {
           </div>
         </div>
       )}
+
+      <TourManager
+        tourType={tourType}
+        step={tourStep}
+        onStepChange={handleTourStepChange}
+        onTourComplete={handleTourComplete}
+        onAddMessage={handleAddTourMessage}
+      />
     </>
   );
 }
