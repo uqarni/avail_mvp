@@ -1,185 +1,115 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import Joyride, { STATUS } from 'react-joyride';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
+import TourManager from './TourManager';
+import { processChatMessage } from '../services/TourService';
+import { performHealthCheck } from '../api/ApiService';
 
 function Chat() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const firstRenderRef = useRef(true);
-  const tourInProgressRef = useRef(false);
-
-  // Chat state
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
+  const [tourType, setTourType] = useState(null);
+  const [tourStep, setTourStep] = useState(0);
+  const [routeChanged, setRouteChanged] = useState(false);
 
-  // Tour state
-  const [runTour, setRunTour] = useState(false);
-  const [steps, setSteps] = useState([]);
-  const [tourRequested, setTourRequested] = useState(false);
-
-  // Only run on first render
   useEffect(() => {
-    if (firstRenderRef.current) {
-      const inProgressTour = localStorage.getItem('tourInProgress') === 'true';
-      if (inProgressTour) {
-        tourInProgressRef.current = true;
-        setTourRequested(true);
-
-        if (location.pathname.includes('listing-builder')) {
-          setChatOpen(true);
-        }
-      }
-
-      firstRenderRef.current = false;
-    }
+    setRouteChanged(true);
   }, [location.pathname]);
 
-  const setupTourBasedOnLocation = useCallback(() => {
-    if (!tourRequested) return;
-
-    console.log("SETTING UP TOUR FOR:", location.pathname);
-
-    tourInProgressRef.current = true;
-    localStorage.setItem('tourInProgress', 'true');
-
-    if (location.pathname === '/' || location.pathname === '') {
-      // Add a slight delay to make sure the DOM is fully loaded
-      setTimeout(() => {
-        const buildButton = document.querySelector('.build-listing-btn');
-        console.log("Build button found:", buildButton);
-
-        if (buildButton) {
-          setSteps([{
-            target: '.build-listing-btn',
-            content: 'Click this button to start building your listing',
-            disableBeacon: true,
-            placement: 'bottom',
-            spotlightClicks: true,
-            disableOverlayClose: true,
-          }]);
-          setRunTour(true);
-        } else {
-          console.log("BUILD BUTTON NOT FOUND");
-        }
-      }, 500);
-    }
-    else if (location.pathname.includes('listing-builder')) {
-      setChatOpen(true);
-
-      const checkForSidebar = () => {
-        const sidebar = document.querySelector('.listing-builder-sidebar');
-
-        if (sidebar) {
-          setSteps([{
-            target: '.listing-builder-sidebar',
-            content: 'These are the steps to complete your listing',
-            disableBeacon: true,
-            placement: 'right',
-            spotlightClicks: true,
-            disableOverlayClose: true,
-          }]);
-          setRunTour(true);
-
-          setMessages(prev => [
-            ...prev,
-            {
-              text: "Great! Now you're in the listing builder. The sidebar shows all the steps to create your listing.",
-              sender: 'bot'
-            }
-          ]);
-        } else {
-          console.log("SIDEBAR NOT FOUND, TRYING AGAIN IN 1 SECOND");
-          setTimeout(checkForSidebar, 1000);
-        }
-      };
-
-      checkForSidebar();
-    }
-  }, [location.pathname, tourRequested, setMessages]);
-
-  // This effect will run when tourRequested changes
   useEffect(() => {
-    if (tourRequested) {
-      setupTourBasedOnLocation();
-    }
-  }, [tourRequested, setupTourBasedOnLocation]);
-
-  // This effect handles specific behavior for the listing-builder path
-  useEffect(() => {
-    if (location.pathname.includes('listing-builder') && tourInProgressRef.current) {
+    const wasChatOpen = localStorage.getItem('chatOpen') === 'true';
+    if (wasChatOpen) {
       setChatOpen(true);
-      setTourRequested(true);
     }
-  }, [location.pathname]);
 
-  // Handle Joyride events
-  const handleJoyrideCallback = (data) => {
-    const { status, action, type } = data;
-    console.log("JOYRIDE CALLBACK:", status, action, type);
+    const savedTourType = localStorage.getItem('tourType');
+    const savedTourStep = localStorage.getItem('tourStep');
 
-    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
-      setRunTour(false);
-
-      if (
-        (location.pathname === '/' || location.pathname === '') &&
-        type === 'step:after' &&
-        action !== 'skip'
-      ) {
-        navigate('/listing-builder');
-      }
-      else if (location.pathname.includes('listing-builder')) {
-        setTourRequested(false);
-        tourInProgressRef.current = false;
-        localStorage.removeItem('tourInProgress');
+    if (savedTourType && savedTourStep) {
+      const step = parseInt(savedTourStep);
+      if (step > 0) {
+        setTourType(savedTourType);
+        setTourStep(step);
       }
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (tourType && tourStep > 0) {
+      localStorage.setItem('tourType', tourType);
+      localStorage.setItem('tourStep', tourStep.toString());
+    } else {
+      localStorage.removeItem('tourType');
+      localStorage.removeItem('tourStep');
+    }
+  }, [tourType, tourStep]);
+
+  useEffect(() => {
+    localStorage.setItem('chatOpen', chatOpen.toString());
+  }, [chatOpen]);
 
   const toggleChat = () => {
-    setChatOpen(prev => !prev);
+    setChatOpen((prev) => !prev);
+    if (!chatOpen) {
+      setMessages([]);
+    }
   };
 
-  // Start the tour explicitly
-  const startTour = () => {
-    setTourRequested(true);
-    tourInProgressRef.current = true;
-    localStorage.setItem('tourInProgress', 'true');
-    setupTourBasedOnLocation();
-  };
+  const handleTourStepChange = useCallback((newStep) => {
+    setTourStep(newStep);
+  }, []);
 
-  const handleSend = () => {
+  const handleTourComplete = useCallback(() => {
+    setTourType(null);
+    setTourStep(0);
+  }, []);
+
+  const handleAddTourMessage = useCallback((message) => {
+    if (!message) return;
+
+    setMessages((prev) => [
+      ...prev,
+      { text: message, sender: 'bot' }
+    ]);
+  }, []);
+
+  const handleSend = async () => {
     if (inputText.trim() === '') return;
 
-    setMessages(prev => [...prev, { text: inputText, sender: 'user' }]);
-
-    if (inputText.toLowerCase().includes('building list')) {
-      setTimeout(() => {
-        setMessages(prev => [
-          ...prev,
-          {
-            text: "In order to start a building list, you need to click at the highlighted button. I'll show you where.",
-            sender: 'bot'
-          }
-        ]);
-
-        // Start the tour after adding the message
-        startTour();
-      }, 500);
-    }
-    else {
-      setTimeout(() => {
-        setMessages(prev => [
-          ...prev,
-          { text: 'Hello, how can I help you today?', sender: 'bot' }
-        ]);
-      }, 500);
+    try {
+      await performHealthCheck();
+    } catch(e) {
+      console.error("Health check failed ", e);
     }
 
+    const userMessage = inputText;
+    setMessages((prev) => [...prev, { text: userMessage, sender: 'user' }]);
     setInputText('');
+
+    const response = processChatMessage(userMessage);
+
+    if (response.tourType) {
+      setTourType(response.tourType);
+      setTourStep(response.step);
+
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          { text: response.message, sender: 'bot' }
+        ]);
+      }, 500);
+    } else {
+      setTimeout(() => {
+        setMessages((prev) => [
+          ...prev,
+          { text: response.message, sender: 'bot' }
+        ]);
+      }, 500);
+    }
   };
 
-  // Handle pressing Enter in the input field
+  // Handle "Enter" key press in the input field
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       handleSend();
@@ -188,19 +118,16 @@ function Chat() {
 
   return (
     <>
-      <Joyride
-        steps={steps}
-        run={runTour}
-        continuous={false}
-        showSkipButton={true}
-        callback={handleJoyrideCallback}
-        styles={{
-          options: {
-            primaryColor: '#0a2f5e',
-            zIndex: 10000,
-          }
-        }}
-      />
+      {tourType && tourStep > 0 && (
+        <TourManager
+          tourType={tourType}
+          step={tourStep}
+          onStepChange={handleTourStepChange}
+          onTourComplete={handleTourComplete}
+          onAddMessage={handleAddTourMessage}
+          key={`${tourType}-${tourStep}-${location.pathname}`}
+        />
+      )}
 
       <button className="chat-toggle-button" onClick={toggleChat}>
         {chatOpen ? 'X' : 'Chat'}
