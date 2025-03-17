@@ -53,23 +53,12 @@ export const getMaxStepForTour = (tourType) => {
 };
 
 
-export const processChatMessage = async (message) => {
-  try {
-    const lowerMsg = message.toLowerCase().trim();
-    
-    if (lowerMsg === 'building list' || lowerMsg === 'create listing') {
-      return {
-        tourType: TOUR_TYPES.LISTING_BUILDER,
-        step: 1,
-        message: TOUR_CONFIGS[TOUR_TYPES.LISTING_BUILDER].steps[1].message
-      };
-    }
-    
-    return {
-      message: "Hello, how can I help you today?"
-    };
-  } catch (error) {
-    console.error('Error processing message:', error);
-    return { message: "Sorry, I'm having trouble processing your message." };
+export const processChatMessage = (gepetoResponse, setTourType, setTourStep) => {
+  if (gepetoResponse.functionCall && gepetoResponse.functionCall === 'HIGHLIGHT_BUTTON_A') {
+    setTourType(TOUR_TYPES.LISTING_BUILDER);
+    setTourStep(1);
+    return gepetoResponse.Message;
+  } else {
+    return gepetoResponse.Message;
   }
 };
