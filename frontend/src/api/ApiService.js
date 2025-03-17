@@ -16,3 +16,26 @@ export const performHealthCheck = async () => {
     return null;
   }
 };
+
+export const callGepeto = async (userMessage) => {
+  try {
+    console.log(JSON.stringify({ message: userMessage}))
+    const response = await fetch(
+        'http://0.0.0.0:8081/chat/intelligence', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ message: userMessage})
+        })
+    if (!response.ok) {
+      console.error("Couldn't call Gepeto")
+      const errorData = await response.json()
+      throw new Error(`HTTP error! status: ${response.status} Error: ${errorData.message}`);
+    }
+    return await response.json()
+  } catch (error) {
+    console.error("Error calling Gepeto:", error.message)
+    return null
+  }
+}

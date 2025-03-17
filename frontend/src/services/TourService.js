@@ -33,19 +33,16 @@ export const getTourStep = (tourType, step) => {
   return stepConfig || null;
 };
 
-export const processChatMessage = (message) => {
-  const lowerMsg = message.toLowerCase().trim();
-
-  if (lowerMsg.includes('building list') || lowerMsg.includes('create listing')) {
-    return {
-      tourType: TOUR_TYPES.LISTING_BUILDER,
-      step: 1,
-      message: "Let me guide you through creating a listing. First, click the highlighted 'BUILD LISTING' button."
-    };
+export const processChatMessage = (gepetoResponse, setTourType, setTourStep) => {
+  if (gepetoResponse.functionCall && gepetoResponse.functionCall === 'HIGHLIGHT_BUTTON_A') {
+    setTourType(TOUR_TYPES.LISTING_BUILDER);
+    setTourStep(1);
+    return gepetoResponse.Message;
+  } else {
+    return gepetoResponse.Message;
   }
-
-  return { message: "Hello, how can I help you today?" };
 };
+
 
 export const shouldAdvanceOnNavigation = (tourType, currentStep, currentPath) => {
   const currentStepConfig = getTourStep(tourType, currentStep);
