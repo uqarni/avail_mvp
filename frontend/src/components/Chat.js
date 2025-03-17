@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import TourManager from './TourManager';
 import { processChatMessage } from '../services/TourService';
-import { performHealthCheck } from '../api/ApiService';
+import { callGepeto } from '../api/ApiService';
 
 function Chat() {
   const location = useLocation();
@@ -78,33 +78,37 @@ function Chat() {
   const handleSend = async () => {
     if (inputText.trim() === '') return;
 
-    try {
-        await performHealthCheck();
-    } catch(e) {
-        console.error("healthCheck failed ", e)
-    }
-
+    setMessages((prev) => [...prev, { text: inputText, sender: 'user' }]);
     const userMessage = inputText;
-    setMessages((prev) => [...prev, { text: userMessage, sender: 'user' }]);
     setInputText('');
 
-    const response = processChatMessage(userMessage);
+    try {
+      const gepetoResponse = await callGepeto(userMessage)
+      console.log("Gepeto Response:", gepetoResponse);
 
-    if (response.tourType) {
-      setTourType(response.tourType);
-      setTourStep(response.step);
+      if (gepetoResponse) {
+        const messageToDisplay = processChatMessage(gepetoResponse, setTourType, setTourStep);
 
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            { text: messageToDisplay, sender: 'bot' }
+          ]);
+        }, 500);
+      } else {
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            { text: "Sorry, I'm having trouble understanding you right now.", sender: 'bot' }
+          ]);
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Error processing message:', error);
       setTimeout(() => {
         setMessages((prev) => [
           ...prev,
-          { text: response.message, sender: 'bot' }
-        ]);
-      }, 500);
-    } else {
-      setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          { text: response.message, sender: 'bot' }
+          { text: "Sorry, I'm having trouble responding right now.", sender: 'bot' }
         ]);
       }, 500);
     }
