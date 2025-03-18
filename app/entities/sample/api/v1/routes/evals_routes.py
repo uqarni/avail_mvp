@@ -1,10 +1,10 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-from app.entities.sample.services.gepeto import call_gepeto
+from app.entities.sample.services.gepeto_service import call_gepeto
 from app.entities.sample.models.sample_models import ChatRequest
 
 
-router = APIRouter(prefix="/chat", tags=["chat"])
+router = APIRouter(prefix="/api", tags=["api"])
 
 @router.get("/health")
 async def health():
@@ -18,7 +18,7 @@ async def health():
         )
 
 
-@router.post("/intelligence")
+@router.post("/chat")
 async def chat(request: ChatRequest):
     try:
         gepeto_response = call_gepeto(request.message)

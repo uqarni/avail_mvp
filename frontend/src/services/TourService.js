@@ -37,9 +37,9 @@ export const processChatMessage = (gepetoResponse, setTourType, setTourStep) => 
   if (gepetoResponse.functionCall && gepetoResponse.functionCall === 'HIGHLIGHT_BUTTON_A') {
     setTourType(TOUR_TYPES.LISTING_BUILDER);
     setTourStep(1);
-    return gepetoResponse.Message;
+    return gepetoResponse.message;
   } else {
-    return gepetoResponse.Message;
+    return gepetoResponse.message;
   }
 };
 
