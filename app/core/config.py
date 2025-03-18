@@ -73,9 +73,7 @@ class Settings(BaseSettings):
     REDIS_PASSWORD: str | None = os.getenv("REDIS_PASSWORD")
 
     # Gepeto
-    GEPETO_API_URL: str = os.getenv("GEPETO_API_URL")
     GEPETO_API_KEY: str = os.getenv("GEPETO_API_KEY")
-    GEPETO_PROMPT_VERSION_ID: int = 175
 
 
 

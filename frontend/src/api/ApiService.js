@@ -1,6 +1,6 @@
 export const performHealthCheck = async () => {
   try {
-    const response = await fetch('http://0.0.0.0:8081/chat/health')
+    const response = await fetch('http://0.0.0.0:8081/api/health')
     if (!response.ok) {
       console.error("Backend is not healthy");
       const errorData = await response.json();
@@ -21,7 +21,7 @@ export const callGepeto = async (userMessage) => {
   try {
     console.log(JSON.stringify({ message: userMessage}))
     const response = await fetch(
-        'http://0.0.0.0:8081/chat/intelligence', {
+        'http://0.0.0.0:8081/api/chat', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
