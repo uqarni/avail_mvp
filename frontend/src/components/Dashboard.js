@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Chat from './Chat';
+
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -103,8 +103,6 @@ function Dashboard() {
       <footer className="app-footer">
         <p>&copy; {new Date().getFullYear()} Avail. All rights reserved.</p>
       </footer>
-
-      <Chat />
     </div>
   );
 }

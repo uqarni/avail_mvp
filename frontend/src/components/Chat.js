@@ -1,53 +1,43 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import TourManager from './TourManager';
-import { processChatMessage } from '../services/TourService';
 import { callGepeto } from '../api/ApiService';
 
 function Chat() {
   const location = useLocation();
-  const [chatOpen, setChatOpen] = useState(false);
+  const prevLocationRef = useRef(location.pathname);
+
+  const [highlightedElement, setHighlightedElement] = useState(null);
+  const [pendingHighlight, setPendingHighlight] = useState(null);
+
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
-  const [tourType, setTourType] = useState(null);
-  const [tourStep, setTourStep] = useState(0);
-  const [routeChanged, setRouteChanged] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+
+  const isMounted = useRef(true);
+  useEffect(() => () => { isMounted.current = false; }, []);
 
   useEffect(() => {
-    setRouteChanged(true);
-  }, [location.pathname]);
+    if (location.pathname !== prevLocationRef.current) {
+      console.log(`Page changed from ${prevLocationRef.current} to ${location.pathname}`);
+      prevLocationRef.current = location.pathname;
 
-  useEffect(() => {
-    const wasChatOpen = localStorage.getItem('chatOpen') === 'true';
-    if (wasChatOpen) {
-      setChatOpen(true);
-    }
+      setHighlightedElement(null);
 
-    const savedTourType = localStorage.getItem('tourType');
-    const savedTourStep = localStorage.getItem('tourStep');
-
-    if (savedTourType && savedTourStep) {
-      const step = parseInt(savedTourStep);
-      if (step > 0) {
-        setTourType(savedTourType);
-        setTourStep(step);
+      if (pendingHighlight) {
+        console.log(`Will attempt to highlight ${pendingHighlight} after page transition`);
+        setTimeout(() => {
+          const el = document.querySelector(pendingHighlight);
+          if (el) {
+            console.log(`Element ${pendingHighlight} found after page transition, highlighting it`);
+            setHighlightedElement(pendingHighlight);
+          } else {
+            console.warn(`Element ${pendingHighlight} not found after page transition`);
+          }
+        }, 500);
       }
     }
-  }, []);
-
-  useEffect(() => {
-    if (tourType && tourStep > 0) {
-      localStorage.setItem('tourType', tourType);
-      localStorage.setItem('tourStep', tourStep.toString());
-    } else {
-      localStorage.removeItem('tourType');
-      localStorage.removeItem('tourStep');
-    }
-  }, [tourType, tourStep]);
-
-  useEffect(() => {
-    localStorage.setItem('chatOpen', chatOpen.toString());
-  }, [chatOpen]);
+  }, [location.pathname, pendingHighlight]);
 
   const toggleChat = () => {
     setChatOpen((prev) => !prev);
@@ -56,80 +46,126 @@ function Chat() {
     }
   };
 
-  const handleTourStepChange = useCallback((newStep) => {
-    setTourStep(newStep);
-  }, []);
-
-  const handleTourComplete = useCallback(() => {
-    setTourType(null);
-    setTourStep(0);
-  }, []);
-
-  const handleAddTourMessage = useCallback((message) => {
-    if (!message) return;
-
-    setMessages((prev) => [
-      ...prev,
-      { text: message, sender: 'bot' }
-    ]);
-  }, []);
-
+  // 1) Send a user message to the AI
   const handleSend = async () => {
-    if (inputText.trim() === '') return;
+    if (!inputText.trim()) return;
 
     setMessages((prev) => [...prev, { text: inputText, sender: 'user' }]);
     const userMessage = inputText;
     setInputText('');
 
     try {
-      const gepetoResponse = await callGepeto(userMessage)
+      const gepetoResponse = await callGepeto(userMessage);
       console.log("Gepeto Response:", gepetoResponse);
 
-      if (gepetoResponse) {
-        const messageToDisplay = processChatMessage(gepetoResponse, setTourType, setTourStep);
+      if (!isMounted.current) return;
 
-        setTimeout(() => {
-          setMessages((prev) => [
-            ...prev,
-            { text: messageToDisplay, sender: 'bot' }
-          ]);
-        }, 500);
+      if (gepetoResponse) {
+        setMessages((prev) => [
+          ...prev,
+          { text: gepetoResponse.message, sender: 'bot' }
+        ]);
+
+        if (gepetoResponse.functionCall) {
+          console.log(`Pending highlight: ${gepetoResponse.functionCall}`);
+          setPendingHighlight(gepetoResponse.functionCall);
+
+          const el = document.querySelector(gepetoResponse.functionCall);
+          if (el) {
+            console.log(`Element ${gepetoResponse.functionCall} found, highlighting immediately`);
+            setHighlightedElement(gepetoResponse.functionCall);
+          } else {
+            console.log(`Element ${gepetoResponse.functionCall} not found yet, will poll for it`);
+          }
+        } else {
+          setPendingHighlight(null);
+          setHighlightedElement(null);
+        }
       } else {
-        setTimeout(() => {
-          setMessages((prev) => [
-            ...prev,
-            { text: "Sorry, I'm having trouble understanding you right now.", sender: 'bot' }
-          ]);
-        }, 500);
+        setMessages((prev) => [
+          ...prev,
+          { text: "Sorry, I'm having trouble understanding you right now.", sender: 'bot' }
+        ]);
       }
     } catch (error) {
       console.error('Error processing message:', error);
-      setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          { text: "Sorry, I'm having trouble responding right now.", sender: 'bot' }
-        ]);
-      }, 500);
+      if (!isMounted.current) return;
+      setMessages((prev) => [
+        ...prev,
+        { text: "Sorry, I'm having trouble responding right now.", sender: 'bot' }
+      ]);
     }
   };
 
-  // Handle "Enter" key press in the input field
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSend();
+  // 2) Whenever the user clicks a highlighted element, call the AI again
+  const handleElementClick = async (selector) => {
+    console.log(`User clicked: ${selector} on ${location.pathname}`);
+
+    try {
+      const response = await callGepeto(`the user clicked on ${selector} on ${location.pathname}`);
+      console.log("AI responded after click:", response);
+
+      if (!isMounted.current) return;
+
+      // Show AI's message
+      if (response?.message) {
+        setMessages((prev) => [
+          ...prev,
+          { text: response.message, sender: 'bot' }
+        ]);
+      }
+
+      // If the AI wants to highlight something else
+      if (response?.functionCall) {
+        setPendingHighlight(response.functionCall);
+
+        const el = document.querySelector(response.functionCall);
+        if (el) {
+          console.log(`Element ${response.functionCall} found, highlighting immediately`);
+          setHighlightedElement(response.functionCall);
+        }
+      } else {
+        setPendingHighlight(null);
+        setHighlightedElement(null);
+      }
+    } catch (err) {
+      console.error("Error after click:", err);
+      if (!isMounted.current) return;
+      setPendingHighlight(null);
+      setHighlightedElement(null);
     }
   };
+
+  useEffect(() => {
+    if (!pendingHighlight) return;
+
+    let attempts = 0;
+    const maxAttempts = 20;
+    const interval = setInterval(() => {
+      attempts++;
+      const el = document.querySelector(pendingHighlight);
+      if (el) {
+        console.log(`Found element ${pendingHighlight}, highlighting it now`);
+        setHighlightedElement(pendingHighlight);
+        setPendingHighlight(null);
+        clearInterval(interval);
+      } else if (attempts >= maxAttempts) {
+        console.log(`Element ${pendingHighlight} not found after ${maxAttempts} attempts, giving up`);
+        setPendingHighlight(null);
+        clearInterval(interval);
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [pendingHighlight]);
 
   return (
     <>
-      {tourType && tourStep > 0 && (
+      {highlightedElement && (
         <TourManager
-          tourType={tourType}
-          step={tourStep}
-          onStepChange={handleTourStepChange}
-          onTourComplete={handleTourComplete}
-          onAddMessage={handleAddTourMessage}
-          key={`${tourType}-${tourStep}-${location.pathname}`}
+          highlightClass={highlightedElement}
+          onElementClick={handleElementClick}
+          onTourComplete={() => setHighlightedElement(null)}
         />
       )}
 
@@ -157,7 +193,7 @@ function Chat() {
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyPress={(e) => { if (e.key === 'Enter') handleSend(); }}
                   placeholder="Type a message..."
                 />
                 <button onClick={handleSend}>Send</button>

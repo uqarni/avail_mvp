@@ -1,98 +1,101 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import Joyride, { STATUS } from 'react-joyride';
-import { getTourStep, shouldAdvanceOnNavigation, convertToJoyrideSteps } from '../services/TourService';
+import React, { useEffect, useState } from 'react';
+import Joyride from 'react-joyride';
 import './TourManager.css';
 
-const TourManager = ({
-  tourType,
-  step,
-  onStepChange,
-  onTourComplete,
-  onAddMessage
-}) => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [joyrideSteps, setJoyrideSteps] = useState([]);
+const EmptyTooltip = () => null;
+
+const TourManager = ({ highlightClass, onElementClick, onTourComplete }) => {
   const [runTour, setRunTour] = useState(false);
-  const messageAddedRef = useRef(false);
-  const navigationProcessedRef = useRef(false);
+  const [joyrideSteps, setJoyrideSteps] = useState([]);
+  // eslint-disable-next-line
+  const [elementExists, setElementExists] = useState(false);
 
+  // Check if element exists in DOM and apply manual highlight if needed
   useEffect(() => {
-    if (!tourType || step === 0) return;
-
-    if (!navigationProcessedRef.current) {
-      const nextStep = shouldAdvanceOnNavigation(tourType, step, location.pathname);
-      if (nextStep) {
-        onStepChange(nextStep);
-        navigationProcessedRef.current = true;
-      }
-    }
-
-    return () => {
-      navigationProcessedRef.current = false;
-    };
-  }, [tourType, step, location.pathname, onStepChange]);
-
-  useEffect(() => {
-    if (!tourType || step === 0) {
-      setRunTour(false);
-      setJoyrideSteps([]);
-      messageAddedRef.current = false;
+    if (!highlightClass) {
       return;
     }
 
-    const stepConfig = getTourStep(tourType, step);
+    const checkElement = () => {
+      const el = document.querySelector(highlightClass);
+      console.log(`Looking for element ${highlightClass}: ${el ? 'Found' : 'Not found'}`);
 
-    if (stepConfig && location.pathname === stepConfig.route) {
-      const steps = convertToJoyrideSteps(tourType, step);
+      return false;
+    };
 
-      if (steps.length > 0) {
-        setJoyrideSteps(steps);
+    if (!checkElement()) {
+      const checkInterval = setInterval(() => {
+        if (checkElement()) {
+          clearInterval(checkInterval);
+        }
+      }, 100);
 
-        setTimeout(() => {
-          setRunTour(true);
+      setTimeout(() => clearInterval(checkInterval), 3000);
+    }
+  }, [highlightClass]);
 
-          if (stepConfig.message && onAddMessage && !messageAddedRef.current) {
-            onAddMessage(stepConfig.message);
-            messageAddedRef.current = true;
-          }
-        }, 300);
-      }
-    } else {
+  useEffect(() => {
+    if (!highlightClass) {
       setRunTour(false);
+      setJoyrideSteps([]);
+      return;
     }
 
-    return () => {
-      messageAddedRef.current = false;
+    setJoyrideSteps([
+      {
+        target: highlightClass,
+        content: '',
+        disableBeacon: true,
+        spotlightClicks: true,
+        disableOverlayClose: true,
+      },
+    ]);
+
+    setTimeout(() => {
+      const el = document.querySelector(highlightClass);
+      if (el) {
+        console.log('Starting Joyride tour for', highlightClass);
+        setRunTour(true);
+      } else {
+        console.warn(`Element ${highlightClass} not found when trying to start Joyride`);
+      }
+    }, 500);
+  }, [highlightClass, elementExists]);
+
+  useEffect(() => {
+    if (!highlightClass) return;
+
+    const el = document.querySelector(highlightClass);
+    if (!el) return;
+
+    const handleClick = () => {
+      onElementClick(highlightClass);
     };
-  }, [tourType, step, location.pathname, onAddMessage]);
+
+    el.addEventListener('click', handleClick);
+    return () => {
+      el.removeEventListener('click', handleClick);
+    };
+  }, [highlightClass, onElementClick]);
 
   const handleJoyrideCallback = (data) => {
-    const { status, action, type } = data;
+    const { status, type } = data;
 
-    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
-      setRunTour(false);
+    if (status === 'finished' || status === 'skipped') {
+      console.log('Tour finished or skipped');
+      onTourComplete && onTourComplete();
+    }
 
-      const currentStepConfig = getTourStep(tourType, step);
-
-      if (currentStepConfig) {
-        if (type === 'step:after' && action !== 'skip') {
-          if (currentStepConfig.navigateTo) {
-            navigate(currentStepConfig.navigateTo);
-          }
-
-          if (currentStepConfig.nextStepOnClick) {
-            onStepChange(step + 1);
-          }
-        } else if (action === 'skip') {
-          onTourComplete();
-        }
+    if (type === 'error:target_not_found') {
+      console.error(`Target element not found: ${highlightClass}`);
+      const el = document.querySelector(highlightClass);
+      if (el) {
+        el.classList.add('manual-highlight');
       }
     }
   };
 
-  if (!tourType || step === 0 || joyrideSteps.length === 0) {
+  if (!highlightClass || joyrideSteps.length === 0) {
     return null;
   }
 
@@ -101,13 +104,17 @@ const TourManager = ({
       steps={joyrideSteps}
       run={runTour}
       continuous={false}
-      showSkipButton={true}
+      showSkipButton={false}
+      tooltipComponent={EmptyTooltip}
       callback={handleJoyrideCallback}
       styles={{
         options: {
-          primaryColor: '#0a2f5e',
-          zIndex: 10000,
-        }
+          zIndex: 999999,
+        },
+        spotlight: {
+          borderRadius: 5,
+          boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
+        },
       }}
     />
   );

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Chat from './Chat';
 import './ListingBuilder.css';
 
 
@@ -305,17 +304,20 @@ function ListingBuilder() {
     <div className="property-app">
       <div className="listing-builder">
         <div className="listing-builder-sidebar">
-          <ul className="steps-list">
-            {steps.map((step) => (
-              <li
-                key={step.id}
-                className={`step-item ${currentStep === step.id ? 'active' : ''} ${currentStep > step.id ? 'completed' : ''}`}
-              >
-                <span className="step-number">{step.id}</span>
-                <span className="step-name">{step.name}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="listing-builder-sidebar" data-testid="listing-sidebar">
+            <ul className="steps-list">
+              {steps.map((step) => (
+                  <li
+                      key={step.id}
+                      className={`step-item ${currentStep === step.id ? 'active' : ''} ${currentStep > step.id ? 'completed' : ''}`}
+                      data-step-id={step.id}
+                  >
+                    <span className="step-number">{step.id}</span>
+                    <span className="step-name">{step.name}</span>
+                  </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         <div className="listing-builder-content">
@@ -334,8 +336,6 @@ function ListingBuilder() {
           </div>
         </div>
       </div>
-
-      <Chat/>
     </div>
   );
 }
