@@ -37,11 +37,10 @@ class GepetoRun:
             logger.error(f"Error getting agent 'avail chatbot': {e}")
             raise
 
-    def _append_message(self, message: str) -> List[Dict[str, Any]]:
+    @staticmethod
+    def _append_message(message: str) -> List[Dict[str, Any]]:
         try:
-            css_whitelist_ai = self.whitelist.export_for_ai()
             message_history = [
-                MessageHistory(role="system", content=str(css_whitelist_ai)),
                 MessageHistory(role="user", content=message)
             ]
             return [msg.model_dump() for msg in message_history]
@@ -71,10 +70,10 @@ class GepetoRun:
             response = self.avail.agents.run(
                 agent,
                 messages,
-                {},
-                False,
-                1,
-                True
+                {"FUNCTIONS": self.whitelist.export_for_ai()},
+                False,  # debug mode
+                1,  # max_turns
+                True  # function calling
             )
 
             if not response.messages:

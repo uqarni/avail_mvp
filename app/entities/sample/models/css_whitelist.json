@@ -1,0 +1,18 @@
+{
+  "elements": {
+    ".build-listing-btn": {
+      "description": "Blue button. Click this button to start building your listing",
+      "page": "/",
+      "tours": [
+        "create_listing"
+      ]
+    },
+    ".listing-builder-sidebar": {
+      "description": "Side bar containing the steps to complete your listing. Follow each step to create your listing.",
+      "page": "/listing-builder",
+      "tours": [
+        "create_listing"
+      ]
+    }
+  }
+}
