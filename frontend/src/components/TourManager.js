@@ -1,148 +1,81 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { getTourStep, shouldAdvanceOnNavigation } from '../services/TourService';
+import { useEffect, useRef } from 'react';
+import tippy from 'tippy.js';
+import 'tippy.js/dist/tippy.css';
+import 'tippy.js/themes/light.css';
 import './TourManager.css';
 
-const TourManager = ({
-  tourType,
-  step,
-  onStepChange,
-  onTourComplete,
-  onAddMessage
-}) => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [targetElement, setTargetElement] = useState(null);
-  const [targetRect, setTargetRect] = useState(null);
-  const [showSpotlight, setShowSpotlight] = useState(false);
-  const [stepConfig, setStepConfig] = useState(null);
-  const cleanupRef = useRef(null);
-  const hasAddedMessageRef = useRef(false);
-  const navigationProcessedRef = useRef(false);
-  const spotlightPadding = 15;
+const TourManager = ({ highlightClass, onElementClick, onTourComplete }) => {
+  const tippyInstanceRef = useRef(null);
 
   useEffect(() => {
-    if (!tourType || step === 0) return;
+    if (!highlightClass) return;
 
-    if (!navigationProcessedRef.current) {
-      const nextStep = shouldAdvanceOnNavigation(tourType, step, location.pathname);
-      if (nextStep) {
-        onStepChange(nextStep);
-        navigationProcessedRef.current = true;
-      }
-    }
+    let attempts = 0;
+    const maxAttempts = 20;
 
-    return () => {
-      navigationProcessedRef.current = false;
-    };
-  }, [tourType, step, location.pathname, onStepChange]);
+    const setupTippy = () => {
+      const targetElement = document.querySelector(highlightClass);
 
-  const findElements = useCallback(() => {
-    if (!stepConfig) return false;
+      if (targetElement) {
+        console.log(`Element ${highlightClass} found, applying Tippy highlight`);
 
-    const element = document.querySelector(stepConfig.selector);
+        targetElement.classList.add('spotlight-target');
 
-    if (element) {
-      setTargetElement(element);
-      setTargetRect(element.getBoundingClientRect());
+        tippyInstanceRef.current = tippy(targetElement, {
+          content: '',
+          placement: 'auto',
+          arrow: true,
+          theme: 'light',
+          trigger: 'manual',
+          hideOnClick: false,
+          interactive: true,
+          interactiveBorder: 10,
+          maxWidth: 350,
+          appendTo: document.body,
+          // Use a wrapper for the custom look
+          onCreate(instance) {
+            // Apply custom styles for an empty tooltip
+            instance.popper.classList.add('highlight-tippy-wrapper');
+          }
+        });
 
-      element.classList.add('spotlight-target');
+        // Show the Tippy tooltip
+        tippyInstanceRef.current.show();
 
-      setShowSpotlight(true);
-
-      if (stepConfig.nextStepOnClick) {
+        // Add custom click handler
         const handleClick = () => {
-          if (stepConfig.navigateTo) {
-            navigate(stepConfig.navigateTo);
-          }
-
-          if (onStepChange) {
-            onStepChange(step + 1);
-          }
+          onElementClick(highlightClass);
         };
 
-        element.addEventListener('click', handleClick);
+        targetElement.addEventListener('click', handleClick);
 
-        cleanupRef.current = () => {
-          element.classList.remove('spotlight-target');
-          element.removeEventListener('click', handleClick);
+        return () => {
+          targetElement.removeEventListener('click', handleClick);
+          targetElement.classList.remove('spotlight-target');
+          if (tippyInstanceRef.current) {
+            tippyInstanceRef.current.destroy();
+            tippyInstanceRef.current = null;
+          }
         };
+      }
+
+      attempts++;
+      if (attempts < maxAttempts) {
+        setTimeout(setupTippy, 250);
       } else {
-        cleanupRef.current = () => {
-          element.classList.remove('spotlight-target');
-        };
-      }
-
-      if (stepConfig.message && onAddMessage && !hasAddedMessageRef.current) {
-        onAddMessage(stepConfig.message);
-        hasAddedMessageRef.current = true;
-      }
-
-      return true;
-    }
-
-    return false;
-  }, [stepConfig, onStepChange, step, onAddMessage, navigate]);
-
-  useEffect(() => {
-    if (!tourType || step === 0) {
-      if (cleanupRef.current) {
-        cleanupRef.current();
-        cleanupRef.current = null;
-      }
-      setShowSpotlight(false);
-      setTargetElement(null);
-      setTargetRect(null);
-      setStepConfig(null);
-      hasAddedMessageRef.current = false;
-      return;
-    }
-
-    hasAddedMessageRef.current = false;
-
-    const config = getTourStep(tourType, step);
-    setStepConfig(config);
-
-    if (config && location.pathname === config.route) {
-      const findElementInterval = setInterval(() => {
-        if (findElements()) {
-          clearInterval(findElementInterval);
-        }
-      }, 200);
-
-      return () => {
-        clearInterval(findElementInterval);
-        if (cleanupRef.current) {
-          cleanupRef.current();
-        }
-      };
-    }
-
-    return () => {
-      if (cleanupRef.current) {
-        cleanupRef.current();
-        cleanupRef.current = null;
+        console.warn(`Element ${highlightClass} not found after ${maxAttempts} attempts`);
+        if (onTourComplete) onTourComplete();
       }
     };
-  }, [tourType, step, location.pathname, findElements]);
 
-  if (!targetElement || !targetRect || !stepConfig || !showSpotlight) {
-    return null;
-  }
+    const cleanup = setupTippy();
 
-  return (
-    <div className="tour-spotlight-overlay">
-      <div
-        className="tour-spotlight-cutout"
-        style={{
-          left: `${targetRect.left - spotlightPadding}px`,
-          top: `${targetRect.top - spotlightPadding}px`,
-          width: `${targetRect.width + (spotlightPadding * 2)}px`,
-          height: `${targetRect.height + (spotlightPadding * 2)}px`,
-        }}
-      />
-    </div>
-  );
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [highlightClass, onElementClick, onTourComplete]);
+
+  return null;
 };
 
 export default TourManager;

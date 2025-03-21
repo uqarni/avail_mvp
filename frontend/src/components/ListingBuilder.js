@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Chat from './Chat';
 import './ListingBuilder.css';
 
 
@@ -335,7 +334,6 @@ function ListingBuilder() {
         </div>
       </div>
 
-      <Chat/>
     </div>
   );
 }

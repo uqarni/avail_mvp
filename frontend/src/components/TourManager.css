@@ -28,18 +28,37 @@
   font-family: sans-serif !important;
 }
 
-
-.tour-spotlight-cutout {
-  position: absolute;
-  z-index: 9001;
-  border-radius: 5px;
-  background-color: transparent;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+/* Tippy and spotlight customization */
+.tippy-box {
+  background-color: transparent !important;
+  color: transparent !important;
 }
 
-/* Target element styling */
+.tippy-content {
+  padding: 0 !important;
+}
+
+.highlight-tippy-wrapper {
+  pointer-events: none !important;
+}
+
+/* Custom spotlight styles using Tippy as the base */
 .spotlight-target {
-  position: relative;
-  z-index: 9002;
-  pointer-events: auto; /* Make sure the element is clickable */
+  position: relative !important;
+  z-index: 9002 !important;
+  pointer-events: auto !important;
+  animation: pulse 1.5s infinite !important;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5) !important;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5), 0 0 0 5px rgba(252, 0, 0, 0.72);
+  }
+  70% {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5), 0 0 0 10px rgba(0, 119, 204, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5), 0 0 0 0 rgba(0, 119, 204, 0);
+  }
 }
