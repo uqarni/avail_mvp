@@ -133,7 +133,7 @@ const TourManager = ({ highlightClass, onElementClick, onTourComplete }) => {
     };
   }, [highlightClass, onElementClick]);
 
-  // Add window resize handler to reposition the highlight
+  // TODO: check if this is still needed
   useEffect(() => {
     if (!highlightClass) return;
     
@@ -142,7 +142,8 @@ const TourManager = ({ highlightClass, onElementClick, onTourComplete }) => {
       if (el && highlightRef.current) {
         const rect = el.getBoundingClientRect();
         
-        // Apply the same sidebar-specific positioning on resize
+        // Sidebar CSS specific handle
+        // TODO: check if this is still needed
         if (highlightClass.includes('sidebar') || rect.left < 200) {
           highlightRef.current.style.top = `${rect.top - 8}px`;
           highlightRef.current.style.left = '0px';
