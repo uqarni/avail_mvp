@@ -1,0 +1,131 @@
+.chat-modal {
+  position: fixed !important;
+  bottom: 80px !important;
+  right: 20px !important;
+  width: 300px !important;
+  max-width: 90% !important;
+  background-color: #fff !important;
+  border: 1px solid #ccc !important;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2) !important;
+  border-radius: 8px !important;
+  z-index: 10000 !important;
+}
+
+.close-chat {
+  position: absolute !important;
+  top: 10px !important;
+  right: 10px !important;
+  border: none !important;
+  background: transparent !important;
+  font-size: 1.2rem !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  line-height: 1 !important;
+  color: #555 !important;
+  font-family: sans-serif !important;
+}
+
+.react-joyride__tooltip {
+  border-radius: 6px !important;
+  padding: 15px !important;
+}
+
+.spotlight-target {
+  position: relative;
+  z-index: 9002;
+  pointer-events: auto !important;
+  overflow: visible !important;
+}
+
+.manual-highlight {
+  box-shadow: 0 0 0 2px #f86, 0 0 0 8px rgba(255, 136, 102, 0.4) !important;
+  border-radius: 4px !important;
+  z-index: 1000 !important;
+  position: relative !important;
+}
+
+/* New absolute positioned highlight that won't be clipped by parent containers */
+.absolute-highlight-border {
+  position: fixed !important;
+  z-index: 9999999 !important;
+  pointer-events: none !important;
+  border-radius: 15px !important;
+  box-sizing: border-box !important;
+  border: 6px solid #4D90FE !important;
+  box-shadow: 0 0 15px rgba(77, 144, 254, 0.7) !important;
+  animation: pulse-absolute-border 1.5s infinite alternate !important;
+  /* Force display as top layer */
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+  /* Override any clipping */
+  overflow: visible !important;
+  clip: auto !important;
+  clip-path: none !important;
+  /* Ensure visibility */
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+@keyframes pulse-absolute-border {
+  0% {
+    border-color: #4D90FE !important;
+    box-shadow: 0 0 15px rgba(77, 144, 254, 0.6) !important;
+  }
+  100% {
+    border-color: #5AC8FA !important;
+    box-shadow: 0 0 20px rgba(90, 200, 250, 0.9) !important;
+  }
+}
+
+.joyride-border-highlight {
+  box-shadow: none !important;
+  border-radius: 8px !important;
+  z-index: 999999 !important;
+  position: relative !important;
+  transition: all 0.3s ease !important;
+  animation: pulse-border 1.5s infinite !important;
+  
+  /* Increased spacing with a larger outline offset */
+  outline: 3px solid #4D90FE !important;
+  outline-offset: 8px !important;
+  
+  /* Add glow effect */
+  filter: drop-shadow(0 0 8px rgba(77, 144, 254, 0.5)) !important;
+  
+  /* Prevent clipping by overriding any overflow properties */
+  overflow: visible !important;
+}
+
+/* Add this class to ensure parent containers don't clip the highlight */
+.spotlight-target:before {
+  content: "" !important;
+  position: absolute !important;
+  top: -15px !important;
+  left: -15px !important;
+  right: -15px !important;
+  bottom: -15px !important;
+  z-index: 999998 !important;
+  pointer-events: none !important;
+  overflow: visible !important;
+}
+
+@keyframes pulse-border {
+  0% {
+    outline-color: #4D90FE !important;
+    outline-offset: 6px !important;
+    filter: drop-shadow(0 0 4px rgba(77, 144, 254, 0.4)) !important;
+  }
+  70% {
+    outline-color: #3482ff !important;
+    outline-offset: 8px !important;
+    filter: drop-shadow(0 0 6px rgba(77, 144, 254, 0.4)) !important;
+  }
+  100% {
+    outline-color: #5AC8FA !important;
+    outline-offset: 10px !important;
+    filter: drop-shadow(0 0 8px rgba(90, 200, 250, 0.6)) !important;
+  }
+} 
