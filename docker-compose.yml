@@ -30,6 +30,61 @@ services:
     networks:
       - gepeto_network
 
+  rocketchat:
+    image: registry.rocket.chat/rocketchat/rocket.chat:latest
+    container_name: rocketchat
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - PORT=3000
+      - ROOT_URL=http://localhost:3001
+      - MONGO_URL=mongodb://mongo:27017/rocketchat
+      - MONGO_OPLOG_URL=mongodb://mongo:27017/local
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASS=password
+      - ADMIN_EMAIL=admin@example.com
+      - OVERWRITE_SETTING_API_Enable_CORS=true
+      - OVERWRITE_SETTING_CORS_Origin=*
+      - OVERWRITE_SETTING_API_CORS_Origin=*
+      - OVERWRITE_SETTING_API_Default_Count=100
+      - OVERWRITE_SETTING_API_Allow_Infinite_Count=true
+      - OVERWRITE_SETTING_Layout_Custom_Script_Enabled=true
+      - OVERWRITE_SETTING_Layout_Custom_Script=http://localhost:3000/rocket-chat-bridge.js
+      - OVERWRITE_SETTING_Accounts_AllowFramedAuthentication=true
+      - OVERWRITE_SETTING_Iframe_Integration_send_enable=true
+      - OVERWRITE_SETTING_Iframe_Integration_receive_enable=true
+      - OVERWRITE_SETTING_Iframe_Integration_send_target_origin=*
+      - OVERWRITE_SETTING_Response_Headers_X-Frame-Options=
+      - OVERWRITE_SETTING_Iframe_Restrict_Access=false
+      - OVERWRITE_SETTING_Iframe_Enabled=true
+      - OVERWRITE_SETTING_API_Rate_Limit_Number=100
+      - OVERWRITE_SETTING_API_Rate_Limit_Window=60000
+    depends_on:
+      - mongo
+    networks:
+      - gepeto_network
+
+  mongo:
+    image: mongo:5.0
+    container_name: mongo
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    command: mongod --oplogSize 128 --replSet rs0 --storageEngine=wiredTiger
+    networks:
+      - gepeto_network
+
+  mongo-init-replica:
+    image: mongo:5.0
+    container_name: mongo-init-replica
+    restart: "no"
+    depends_on:
+      - mongo
+    command: >
+      bash -c "sleep 10 && mongosh --host mongo:27017 --eval \"rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'mongo:27017'}]})\" && echo 'Replica set initialized'"
+    networks:
+      - gepeto_network
 
   postgres:
     image: ankane/pgvector:v0.5.1
@@ -77,8 +132,13 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true
       - WDS_SOCKET_PORT=0
+      - REACT_APP_ROCKET_CHAT_HOST=http://localhost:3001
+      - REACT_APP_ROCKET_CHAT_USER=admin
+      - REACT_APP_ROCKET_CHAT_PASS=password
+      - REACT_APP_ROCKET_CHAT_ROOM=GENERAL
     depends_on:
       - service_name
+      - rocketchat
     networks:
       - gepeto_network
 
@@ -86,6 +146,7 @@ services:
 volumes:
   postgres_data_v1:
   redis_data_v1:
+  mongo_data:
 networks:
   gepeto_network:
     driver: bridge

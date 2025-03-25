@@ -7,7 +7,7 @@ function Dashboard() {
   const [activeTab, setActiveTab] = useState('listing');
 
   const handleBuildListing = () => {
-    navigate('/listing-builder');
+    navigate('/listing');
   };
 
   return (
