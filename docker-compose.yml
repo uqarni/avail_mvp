@@ -60,6 +60,23 @@ services:
       - OVERWRITE_SETTING_Iframe_Enabled=true
       - OVERWRITE_SETTING_API_Rate_Limit_Number=100
       - OVERWRITE_SETTING_API_Rate_Limit_Window=60000
+      - OVERWRITE_SETTING_Theme_Default=light
+      - OVERWRITE_SETTING_Layout_Sidenav_Light=true
+      - OVERWRITE_SETTING_Theme_UseSystemPreference=false
+      - OVERWRITE_SETTING_UI_Use_Real_Name=false
+      - OVERWRITE_SETTING_UI_Allow_room_names_with_special_chars=true
+      - OVERWRITE_SETTING_Accounts_ForceAllUsersDefaultUserPreferences=true
+      - OVERWRITE_SETTING_UI_Use_Real_Name=false
+      - OVERWRITE_SETTING_UI_Hide_System_Messages=true
+      - OVERWRITE_SETTING_UI_Use_Name_Avatar=false
+      - OVERWRITE_SETTING_UI_Merge_Channels_Groups=true
+      - OVERWRITE_SETTING_Messages_HideSystem=true
+      - OVERWRITE_SETTING_UI_Use_Name_Avatar=false
+      - OVERWRITE_SETTING_UI_NoMerge_Channels_Groups=false
+      - OVERWRITE_SETTING_UI_Dark_Mode_Auto_Switch=false
+      - OVERWRITE_SETTING_UI_Dark_Mode=false
+      - OVERWRITE_SETTING_UI_Light_Mode=true
+      - OVERWRITE_SETTING_UI_Collapse_Embedded_Media_Default=false
     depends_on:
       - mongo
     networks:
