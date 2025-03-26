@@ -19,8 +19,6 @@ function App() {
           }}
           chatToggleLabel="Chat"
           chatToggleCloseLabel="X"
-          shouldResetChatOnMount={false}
-          clearHistoryOnNewSession={true}
         />
         <Routes>
           <Route path="/" element={<Dashboard />} />

@@ -11,7 +11,7 @@ The ChatService component is a reusable wrapper that encapsulates RocketChat, To
 
 ## Installation
 
-Ensure you have the following dependencies in your project:
+Ensure you have the following dependencies iZ your project:
 - react-router-dom
 - react-joyride (used by TourManager)
 
