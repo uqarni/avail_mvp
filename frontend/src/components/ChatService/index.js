@@ -1,9 +1,8 @@
-import ChatService from './ChatService';
+import StreamChatService from './StreamChatService';
 
 // Export main component
-export default ChatService;
+export default StreamChatService;
 
 // Export API services and Components if needed
 export { callGepeto, performHealthCheck } from './api/ApiService';
-export { sendRocketChatMessage, resetChatSession } from './api/RocketChatService';
 export { default as TourManager } from './components/TourManager'; 
